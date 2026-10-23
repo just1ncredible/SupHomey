@@ -102,7 +102,7 @@ class HomeTypeOption(BaseModel):
 
 class FilterMeta(BaseModel):
     home_types: list[HomeTypeOption]
-    list_price_range: tuple[float, float]
-    living_area_range: tuple[float, float]
+    list_price_range: tuple[float | None, float | None]
+    living_area_range: tuple[float | None, float | None]
     predicted_available: bool
     predicted_kind: ValuationKind | None

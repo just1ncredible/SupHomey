@@ -29,6 +29,10 @@ Only `property_id` and `predicted_price` (in **dollars**) are required. Include
 `predicted_low/high` only if they come from validated residuals, and say how in `interval_coverage`.
 `export_helpers.export_batch_predictions(...)` writes this format.
 
+When a batch predictions file is loaded, only homes with a valid matching prediction appear
+in the map, results, search and statistics. The source dataset is retained, and model coverage
+is still measured against that full dataset. Without a batch file, all homes remain available.
+
 ## B. Real-time model bundle
 
 ```

@@ -17,7 +17,7 @@ def _status(services: Services) -> ModelStatusResponse:
             source_file=batch.source_file,
             rows_in_file=batch.rows_in_file,
             matched=batch.matched,
-            coverage=round(batch.matched / max(services.repo.total, 1), 4),
+            coverage=round(batch.matched / max(len(services.dataset.frame), 1), 4),
             generated_at=batch.generated_at,
             warnings=batch.warnings,
         )

@@ -42,8 +42,8 @@ def filter_meta(services: Services = Depends(get_services)):
     has_pred = df["predicted_price"].notna()
     return FilterMeta(
         home_types=[HomeTypeOption(value=str(k), count=int(v)) for k, v in types.items()],
-        list_price_range=(float(df["list_price"].min()), float(df["list_price"].max())),
-        living_area_range=(float(df["living_area_sqft"].min()), float(df["living_area_sqft"].max())),
+        list_price_range=(clean(df["list_price"].min()), clean(df["list_price"].max())),
+        living_area_range=(clean(df["living_area_sqft"].min()), clean(df["living_area_sqft"].max())),
         predicted_available=bool(has_pred.any()),
         predicted_kind=services.batch.kind if services.batch and has_pred.any() else None,
     )
