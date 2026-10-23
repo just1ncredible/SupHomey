@@ -1,5 +1,8 @@
 # Model hand-off (for the ML team)
 
+For the source behind the current LSTM predictions, see the
+[original training script and workflow notes](training/README.md).
+
 The app never trains anything. It shows valuations that **you** supply, in one of two ways.
 Until one of them exists, the UI says *"AI valuation unavailable — model not connected."*
 
