@@ -223,6 +223,10 @@ properties on "Fixture Ln". The health endpoint, top bar, map and details panel 
 
 ## 6. Connecting the ML team's model
 
+The current LSTM training source and workflow are available in
+**[models/training/](models/training/README.md)** for readers who want to see how the
+property-price model was trained and its predictions exported.
+
 The full guide is in **[models/README.md](models/README.md)**. In short:
 
 - **A. Batch predictions (simplest).** Export `models/predictions/predictions.csv` with

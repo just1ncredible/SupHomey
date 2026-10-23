@@ -110,11 +110,12 @@ def test_leaky_model_card_is_refused(client_factory, model_dir):
 
 
 def test_batch_predictions_join_by_property_id(client_factory, tmp_path):
-    ids = [p["id"] for p in client_factory().get("/api/properties", params={"limit": 3}).json()["items"]]
+    original = client_factory().get("/api/properties", params={"limit": 4}).json()
+    ids = [p["id"] for p in original["items"]]
     preds = tmp_path / "predictions.csv"
     pd.DataFrame(
         {
-            "property_id": ids + ["not-a-real-id"],
+            "property_id": ids[:3] + ["not-a-real-id"],
             "predicted_price": [410000, 520000, -5, 1],
             "predicted_low": [380000, None, None, None],
             "predicted_high": [450000, None, None, None],
@@ -127,12 +128,44 @@ def test_batch_predictions_join_by_property_id(client_factory, tmp_path):
     status = client.get("/api/model/metrics").json()
     assert status["batch"]["kind"] == "batch" and status["batch"]["matched"] == 2
     assert len(status["batch"]["warnings"]) == 2  # one non-positive value, one unknown id
+    assert status["batch"]["coverage"] == round(2 / original["total"], 4)
 
     v = client.get(f"/api/properties/{ids[0]}").json()["valuation"]
     assert v["status"] == "available" and v["source"] == "batch"
     assert (v["value"], v["low"], v["high"]) == (410000, 380000, 450000)
-    # Real predictions present -> no simulated values anywhere, even with the dev flag on.
-    assert client.get(f"/api/properties/{ids[2]}").json()["valuation"]["status"] == "unavailable"
+    # Missing and invalid predictions are hidden, even with the simulated dev flag on.
+    for property_id in ids[2:]:
+        assert client.get(f"/api/properties/{property_id}").status_code == 404
+    for basis in ("list", "predicted"):
+        visible = client.get("/api/properties", params={"price_basis": basis}).json()
+        assert visible["total"] == 2
+        assert {p["id"] for p in visible["items"]} == set(ids[:2])
+        assert all(p["valuation_kind"] == "batch" for p in visible["items"])
+    hidden_address = original["items"][3]["street_address"]
+    assert client.get("/api/search", params={"q": hidden_address}).json()["properties"] == []
+    meta = client.get("/api/properties/meta").json()
+    assert sum(t["count"] for t in meta["home_types"]) == 2
+    summary = client.get("/api/market/summary").json()
+    assert summary["count"] == summary["dataset_total"] == summary["predicted_count"] == 2
+    assert client.get("/api/health").json()["dataset"]["records"] == original["total"]
 
     filtered = client.get("/api/properties", params={"price_basis": "predicted", "min_price": 500000}).json()
     assert [i["id"] for i in filtered["items"]] == [ids[1]]
+
+
+@pytest.mark.parametrize("property_id,price", [("not-a-real-id", 100000), ("fixture-00000", -5)])
+def test_batch_without_matching_predictions_shows_empty_results(client_factory, tmp_path, property_id, price):
+    preds = tmp_path / "unmatched.csv"
+    pd.DataFrame({"zpid": [property_id], "predicted_price": [price]}).to_csv(preds, index=False)
+    client = client_factory(predictions_path=preds)
+
+    properties = client.get("/api/properties").json()
+    assert properties["total"] == 0 and properties["items"] == []
+    meta_response = client.get("/api/properties/meta")
+    assert meta_response.status_code == 200
+    meta = meta_response.json()
+    assert meta["home_types"] == [] and meta["predicted_available"] is False
+    assert meta["list_price_range"] == meta["living_area_range"] == [None, None]
+    summary = client.get("/api/market/summary").json()
+    assert summary["count"] == summary["dataset_total"] == 0
+    assert client.get("/api/model/metrics").json()["batch"]["coverage"] == 0

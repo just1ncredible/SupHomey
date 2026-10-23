@@ -1,5 +1,8 @@
 # Model hand-off (for the ML team)
 
+For the source behind the current LSTM predictions, see the
+[original training script and workflow notes](training/README.md).
+
 The app never trains anything. It shows valuations that **you** supply, in one of two ways.
 Until one of them exists, the UI says *"AI valuation unavailable — model not connected."*
 
@@ -28,6 +31,10 @@ property_id,predicted_price,predicted_low,predicted_high,interval_coverage,model
 Only `property_id` and `predicted_price` (in **dollars**) are required. Include
 `predicted_low/high` only if they come from validated residuals, and say how in `interval_coverage`.
 `export_helpers.export_batch_predictions(...)` writes this format.
+
+When a batch predictions file is loaded, only homes with a valid matching prediction appear
+in the map, results, search and statistics. The source dataset is retained, and model coverage
+is still measured against that full dataset. Without a batch file, all homes remain available.
 
 ## B. Real-time model bundle
 

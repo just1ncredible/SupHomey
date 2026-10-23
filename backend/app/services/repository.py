@@ -77,6 +77,10 @@ class PandasPropertyRepository(PropertyRepository):
             for col in VALUATION_COLUMNS:
                 df[col] = np.nan
             df["valuation_kind"] = None
+        # A supplied batch defines the visible homes, including search and statistics.
+        # Keep the original dataset intact for reloads and model coverage reporting.
+        if valuations is not None and valuations.kind == "batch":
+            df = df.loc[df["predicted_price"].notna()].copy()
         self._df = df
         self._address_lc = df["street_address"].fillna("").str.lower()
         self._city_lc = df["city"].fillna("").str.lower()

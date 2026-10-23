@@ -93,8 +93,8 @@ export interface SearchResponse {
 
 export interface FilterMeta {
   home_types: { value: string; count: number }[]
-  list_price_range: [number, number]
-  living_area_range: [number, number]
+  list_price_range: [number | null, number | null]
+  living_area_range: [number | null, number | null]
   predicted_available: boolean
   predicted_kind: ValuationKind | null
 }
