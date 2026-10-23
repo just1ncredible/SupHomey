@@ -17,7 +17,7 @@ export function Logo({ showTagline = false }: { showTagline?: boolean }) {
     <div className="flex items-center gap-2.5">
       <BrandMark className="size-7 sm:size-8" />
       <div className="leading-tight">
-        <div className="text-sm font-semibold tracking-tight whitespace-nowrap text-brand-navy sm:text-[15px]">HomeScope</div>
+        <div className="text-sm font-semibold tracking-tight whitespace-nowrap text-brand-navy sm:text-[15px] dark:text-foreground">HomeScope</div>
         {showTagline && (
           <div className="hidden text-[11px] text-muted-foreground xl:block">Explore Houston. Understand Home Values.</div>
         )}
