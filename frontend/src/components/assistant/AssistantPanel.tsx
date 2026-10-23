@@ -276,13 +276,13 @@ export function AssistantPanel({
   const notConfigured = status.data && !status.data.configured
 
   return (
-    <section aria-label="Ask HomeScope" className={cn('flex min-h-0 flex-col overflow-hidden rounded-2xl border bg-card shadow-2xl', className)}>
+    <section aria-label="Ask SupHomey" className={cn('flex min-h-0 flex-col overflow-hidden rounded-2xl border bg-card shadow-2xl', className)}>
       <header className="flex items-center gap-2 border-b px-4 py-2.5">
         <span className="grid size-7 place-items-center rounded-lg bg-brand-navy text-brand-teal">
           <Sparkles className="size-4" />
         </span>
         <div className="min-w-0 flex-1 leading-tight">
-          <h2 className="text-sm font-semibold">Ask HomeScope</h2>
+          <h2 className="text-sm font-semibold">Ask SupHomey</h2>
           <p className="truncate text-[11px] text-muted-foreground">Answers from the 2024 Houston listings data</p>
         </div>
         {turns.length > 0 && (
@@ -290,7 +290,7 @@ export function AssistantPanel({
             <RotateCcw />
           </Button>
         )}
-        <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close Ask HomeScope">
+        <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close Ask SupHomey">
           <X />
         </Button>
       </header>
@@ -386,7 +386,7 @@ export function AssistantPanel({
           </Button>
         </div>
         <p className="mt-1.5 text-[10px] text-muted-foreground">
-          Questions are processed by OpenAI. Figures come from HomeScope's dataset; not financial advice.
+          Questions are processed by OpenAI. Figures come from SupHomey's dataset; not financial advice.
         </p>
       </form>
     </section>

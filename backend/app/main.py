@@ -1,4 +1,4 @@
-"""HomeScope API.
+"""SupHomey API.
 
     uvicorn app.main:app --reload --port 8000     (from the backend/ folder)
 """
@@ -30,7 +30,7 @@ def create_app(settings: Settings | None = None, openai_client: Any | None = Non
         yield
 
     app = FastAPI(
-        title="HomeScope API",
+        title="SupHomey API",
         version=__version__,
         description=(
             "Home Value Explorer backend. Serves 2024 Houston listing records, descriptive market "

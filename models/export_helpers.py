@@ -1,5 +1,5 @@
 """Helpers for the ML team: export a trained model (or its predictions) in the format the
-HomeScope API loads. Standalone: copy this file next to your notebook (works
+SupHomey API loads. Standalone: copy this file next to your notebook (works
 in Colab too). Requires pandas, numpy and joblib.
 
     from export_helpers import export_model_bundle, export_batch_predictions, interval_from_residuals

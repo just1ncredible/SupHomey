@@ -275,7 +275,7 @@ export default function HomeValueExplorer() {
       variant="outline"
       size="icon-lg"
       onClick={() => setAssistantOpen((o) => !o)}
-      aria-label="Ask HomeScope AI"
+      aria-label="Ask SupHomey AI"
       aria-pressed={assistantOpen}
       className={cn(
         'size-10 shrink-0',
@@ -477,7 +477,7 @@ export default function HomeValueExplorer() {
         <>
           <Sheet open={assistantOpen} onOpenChange={setAssistantOpen}>
             <SheetContent side="bottom" showCloseButton={false} className="gap-0 overflow-hidden rounded-t-2xl p-0 data-[side=bottom]:h-[85dvh]">
-              <SheetTitle className="sr-only">Ask HomeScope</SheetTitle>
+              <SheetTitle className="sr-only">Ask SupHomey</SheetTitle>
               <SheetDescription className="sr-only">Ask questions about Houston homes</SheetDescription>
               {assistant}
             </SheetContent>

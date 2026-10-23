@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Menu } from '@base-ui/react/menu'
-import { Check, Link2, Monitor, Moon, RotateCcw, Settings, Sun } from 'lucide-react'
+import { Activity, Check, Link2, Monitor, Moon, RotateCcw, Settings, Sun } from 'lucide-react'
 
 import { useTheme } from '@/context/Theme'
 import { clearPrefs, THEME_CHOICES, type ThemeChoice } from '@/lib/preferences'
@@ -15,7 +15,7 @@ const THEME_OPTIONS: Record<ThemeChoice, { label: string; icon: typeof Sun }> = 
 const itemClass =
   'flex cursor-default items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm outline-none select-none data-highlighted:bg-muted [&_svg]:size-4 [&_svg]:shrink-0'
 
-export function SettingsMenu() {
+export function SettingsMenu({ onOpenModelStatus }: { onOpenModelStatus: () => void }) {
   const { choice, setChoice } = useTheme()
   const [copied, setCopied] = useState(false)
 
@@ -64,6 +64,10 @@ export function SettingsMenu() {
               </Menu.RadioGroup>
             </Menu.Group>
             <Menu.Separator className="my-1 h-px bg-border" />
+            <Menu.Item onClick={onOpenModelStatus} className={itemClass}>
+              <Activity className="text-muted-foreground" />
+              Model status
+            </Menu.Item>
             <Menu.Item closeOnClick={false} onClick={copyLink} className={itemClass}>
               {copied ? <Check className="text-brand-teal-strong" /> : <Link2 className="text-muted-foreground" />}
               <span className={cn(copied && 'text-brand-teal-strong')}>{copied ? 'Link copied' : 'Copy link to this view'}</span>

@@ -132,7 +132,7 @@ export const api = {
 
   assistantStatus: (signal?: AbortSignal) => request<AssistantStatus>('/api/assistant/status', { signal }),
 
-  /** Ask HomeScope: natural-language question answered from the dataset via OpenAI tool calling. */
+  /** Ask SupHomey: natural-language question answered from the dataset via OpenAI tool calling. */
   assistantChat: (messages: ChatMessage[], context: AssistantContext, signal?: AbortSignal) =>
     request<AssistantResponse>('/api/assistant/chat', { method: 'POST', body: JSON.stringify({ messages, context }), signal }),
 

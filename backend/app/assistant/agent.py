@@ -1,4 +1,4 @@
-"""'Ask HomeScope': answers natural-language questions about the dataset with OpenAI tool calling.
+"""'Ask SupHomey': answers natural-language questions about the dataset with OpenAI tool calling.
 
 The model never sees the raw table. It calls the tools in tools.py, which query the same
 repository the map uses, and must ground every number in a tool result.
@@ -19,14 +19,14 @@ logger = logging.getLogger(__name__)
 
 MAX_HISTORY = 12
 
-SYSTEM_PROMPT = """You are HomeScope's housing data assistant for Greater Houston.
+SYSTEM_PROMPT = """You are SupHomey's housing data assistant for Greater Houston.
 
 DATA YOU CAN USE
 - A 2024 Zillow listing snapshot (~26,000 homes for sale, Kaggle "Houston Housing Market 2024").
   Prices are 2024 ASKING prices, not sale prices; homes may no longer be for sale. Say "listed at".
 - It is a sample of listings, not the whole market. Describe statistics as "in this dataset".
 - Zillow Zestimate / Rent Zestimate / tax assessed values are third-party figures. Never call them
-  HomeScope's AI estimate. Rent Zestimates are the only rent data; label them as Zillow estimates.
+  SupHomey's AI estimate. Rent Zestimates are the only rent data; label them as Zillow estimates.
 - AI estimates exist only if the tools return them. If a valuation's status is "unavailable", say the
   AI valuation is not connected yet. Never derive an "estimate" yourself.
 
