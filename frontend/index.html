@@ -7,6 +7,16 @@
     <meta name="description" content="HomeScope — explore Houston, understand home values." />
     <meta name="theme-color" content="#0f2742" />
     <title>HomeScope</title>
+    <script>
+      // Apply the saved theme before first paint to avoid a light flash in dark mode.
+      try {
+        var t = JSON.parse(localStorage.getItem('homescope:theme') || '"light"')
+        if (t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark')
+          document.documentElement.style.colorScheme = 'dark'
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

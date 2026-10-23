@@ -12,6 +12,10 @@ Affordability Explorer appear in the navigation as "Soon" and plug into the same
 - Market statistics scoped to the map view, the filtered set, or the whole dataset
 - A model hand-off layer: precomputed predictions or a real-time model bundle from the ML team
 - **Ask HomeScope**: AI search that answers plain-English questions from the dataset (OpenAI)
+- Eye button in the map controls hides the home markers to show the plain map (the selected home stays)
+- Settings menu (gear, top right): light (default) / dark / match-device theme, copy a link to the current
+  view, reset to defaults. Filters, sort, map position and the selected home live in the page
+  address, so links are shareable; theme, sort, sidebar and price basis are remembered per browser
 
 > **What the numbers are.** Prices in the dataset are **2024 Zillow asking prices** from a listing
 > snapshot: not sale prices, and the homes are not necessarily for sale now. AI valuations appear

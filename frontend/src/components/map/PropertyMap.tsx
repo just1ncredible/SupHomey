@@ -3,6 +3,7 @@ import L from 'leaflet'
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 
 import { formatCompactCurrency } from '@/lib/format'
+import type { MapPosition } from '@/lib/urlState'
 import type { BBox, PriceBasis, PropertyMarker } from '@/types/api'
 
 import { ClusterLayer } from './ClusterLayer'
@@ -21,6 +22,10 @@ interface PropertyMapProps {
   onSelect: (id: string, groupIds: string[]) => void
   onViewChange: (view: MapView) => void
   onMapReady: (map: L.Map) => void
+  /** Start here instead of the Houston overview (e.g. from a shared link). Read once on mount. */
+  initialPosition?: MapPosition | null
+  /** Hide the home markers (clusters, dots, price labels) to see the plain map. The selected home stays. */
+  showMarkers?: boolean
 }
 
 function toView(map: L.Map): MapView {
@@ -66,10 +71,13 @@ function SelectedMarker({ marker, priceBasis }: { marker: PropertyMarker; priceB
   )
 }
 
-export function PropertyMap({ markers, priceBasis, selected, onSelect, onViewChange, onMapReady }: PropertyMapProps) {
+export function PropertyMap({ markers, priceBasis, selected, onSelect, onViewChange, onMapReady, initialPosition, showMarkers = true }: PropertyMapProps) {
+  const start = initialPosition
+    ? { center: [initialPosition.lat, initialPosition.lng] as [number, number], zoom: initialPosition.zoom }
+    : { bounds: HOUSTON_VIEW }
   return (
     <MapContainer
-      bounds={HOUSTON_VIEW}
+      {...start}
       maxBounds={MAX_BOUNDS}
       maxBoundsViscosity={0.8}
       minZoom={8}
@@ -82,7 +90,9 @@ export function PropertyMap({ markers, priceBasis, selected, onSelect, onViewCha
       attributionControl
     >
       <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} maxZoom={19} className="hs-tiles" />
-      <ClusterLayer markers={markers} priceBasis={priceBasis} selectedId={selected?.id ?? null} onSelect={onSelect} />
+      {showMarkers && (
+        <ClusterLayer markers={markers} priceBasis={priceBasis} selectedId={selected?.id ?? null} onSelect={onSelect} />
+      )}
       {selected && <SelectedMarker marker={selected} priceBasis={priceBasis} />}
       <ViewWatcher onViewChange={onViewChange} onMapReady={onMapReady} />
     </MapContainer>

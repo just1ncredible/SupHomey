@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils'
 import { MODULES } from '@/modules/registry'
 
 import { Logo } from './Logo'
+import { SettingsMenu } from './SettingsMenu'
 
 const MODEL_BADGE: Record<ModelBadgeState, { label: string; dot: string }> = {
   none: { label: 'Model not connected', dot: 'bg-muted-foreground/50' },
@@ -129,6 +130,7 @@ export function TopNav() {
           <DatasetChip />
         </div>
         <ModelChip />
+        <SettingsMenu />
       </div>
     </header>
   )

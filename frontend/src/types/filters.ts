@@ -39,3 +39,8 @@ export function activeFilterCount(f: PropertyFilters): number {
     f.homeTypes.length ? f.homeTypes : null,
   ].filter((v) => v !== null).length
 }
+
+/** Result-list sort orders. */
+export const SORT_KEYS = ['price_desc', 'price_asc', 'sqft_desc', 'price_per_sqft_asc'] as const
+export type SortKey = (typeof SORT_KEYS)[number]
+export const DEFAULT_SORT: SortKey = 'price_desc'

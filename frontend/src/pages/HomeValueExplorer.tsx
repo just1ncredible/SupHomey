@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
 import { AlertTriangle, FlaskConical, Loader2, PanelLeftClose, SearchX, SlidersHorizontal, Sparkles } from 'lucide-react'
 
@@ -17,13 +17,17 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { useAppStatus } from '@/context/AppStatus'
 import { useApi } from '@/hooks/useApi'
 import { useIsDesktop } from '@/hooks/useMediaQuery'
+import { isBoolean, isOneOf, PREF_KEYS, readPref, writePref } from '@/lib/preferences'
+import { parseUrlState, serializeUrlState } from '@/lib/urlState'
 import { cn } from '@/lib/utils'
 import { api, filtersToParams, fromApiFilters, toApiFilters } from '@/services/api'
 import type { BBox, PropertyMarker } from '@/types/api'
 import type { AreaRow, AssistantAction } from '@/types/assistant'
-import { activeFilterCount, DEFAULT_FILTERS, type PropertyFilters } from '@/types/filters'
+import { activeFilterCount, DEFAULT_FILTERS, DEFAULT_SORT, SORT_KEYS, type PropertyFilters } from '@/types/filters'
 
 const DETAILS_PANEL_WIDTH = 400
+/** Buttons floating over the map need a solid surface; the outline variant goes translucent in dark mode. */
+const FLOATING_BUTTON = 'bg-card shadow-md dark:border-white/15 dark:bg-card dark:text-foreground dark:hover:bg-muted dark:shadow-black/40'
 
 interface Selection {
   marker: PropertyMarker
@@ -37,15 +41,21 @@ function inBBox(m: PropertyMarker, [s, w, n, e]: BBox) {
 export default function HomeValueExplorer() {
   const isDesktop = useIsDesktop()
   const { health, dataVersion } = useAppStatus()
-  const [rawFilters, setFilters] = useState<PropertyFilters>(DEFAULT_FILTERS)
+  // Precedence: shared link (URL) > saved preference > default.
+  const [initialUrl] = useState(() => parseUrlState(window.location.search))
+  const [rawFilters, setFilters] = useState<PropertyFilters>(
+    () => initialUrl.filters ?? { ...DEFAULT_FILTERS, priceBasis: readPref(PREF_KEYS.priceBasis, isOneOf('list', 'predicted')) ?? 'list' },
+  )
   const [selection, setSelection] = useState<Selection | null>(null)
   const [view, setView] = useState<MapView | null>(null)
   const [map, setMap] = useState<L.Map | null>(null)
-  // Filters start collapsed on desktop; the floating search bar stays visible.
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  // Filters start collapsed on desktop (the floating search bar stays visible) unless the user left them open.
+  const [sidebarOpen, setSidebarOpenState] = useState(() => readPref(PREF_KEYS.sidebarOpen, isBoolean) ?? false)
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
-  const [sort, setSort] = useState<SortKey>('price_desc')
+  const [sort, setSort] = useState<SortKey>(() => initialUrl.sort ?? readPref(PREF_KEYS.sort, isOneOf(...SORT_KEYS)) ?? DEFAULT_SORT)
   const [assistantOpen, setAssistantOpen] = useState(false)
+  // Plain-map mode: hide home markers for this visit.
+  const [homesHidden, setHomesHidden] = useState(false)
   const [assistantTurns, setAssistantTurns] = useState<Turn[]>([])
   const [pendingQuestion, setPendingQuestion] = useState<{ id: number; text: string } | null>(null)
 
@@ -144,7 +154,63 @@ export default function HomeValueExplorer() {
     return () => window.removeEventListener('keydown', onKey)
   }, [selection])
 
-  const updateFilters = useCallback((next: PropertyFilters) => setFilters(next), [])
+  // ---- Remembered preferences (only user choices are saved, not values from a shared link)
+  const setSidebarOpen = useCallback((open: boolean) => {
+    setSidebarOpenState(open)
+    writePref(PREF_KEYS.sidebarOpen, open)
+  }, [])
+  const changeSort = useCallback((next: SortKey) => {
+    setSort(next)
+    writePref(PREF_KEYS.sort, next)
+  }, [])
+  const updateFilters = useCallback((next: PropertyFilters) => {
+    setFilters((prev) => {
+      if (next.priceBasis !== prev.priceBasis) writePref(PREF_KEYS.priceBasis, next.priceBasis)
+      return next
+    })
+  }, [])
+
+  // ---- Shareable URL: filters, sort, map position and selected home
+  const pendingHome = useRef(initialUrl.home ?? null)
+  // Record the map position only after a real move (drag, zoom, fly-to), not the map's own start-up fit.
+  const [moved, setMoved] = useState(Boolean(initialUrl.position))
+  useEffect(() => {
+    if (!map || moved) return
+    const mark = () => setMoved(true)
+    map.once('dragstart zoomstart', mark)
+    return () => {
+      map.off('dragstart zoomstart', mark)
+    }
+  }, [map, moved])
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const center = map?.getCenter()
+      const qs = serializeUrlState({
+        filters,
+        sort,
+        position: moved && center && view ? { lat: center.lat, lng: center.lng, zoom: view.zoom } : null,
+        home: selectedId ?? pendingHome.current,
+      })
+      const next = `${window.location.pathname}${qs ? `?${qs}` : ''}`
+      // replaceState (not navigate) so panning doesn't add history entries or re-render the router.
+      if (next !== `${window.location.pathname}${window.location.search}`) window.history.replaceState(window.history.state, '', next)
+    }, 400)
+    return () => window.clearTimeout(timer)
+  }, [filters, sort, view, map, selectedId, moved])
+
+  // Restore a home selected in a shared link once its marker has loaded.
+  useEffect(() => {
+    const id = pendingHome.current
+    if (!id || !properties.data || properties.loading) return
+    pendingHome.current = null
+    const marker = byId.get(id)
+    if (!marker) return
+    const groupIds = markers.filter((o) => o.lat === marker.lat && o.lng === marker.lng).map((o) => o.id)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time restore from the URL
+    setSelection({ marker, groupIds })
+    if (!initialUrl.position) flyToProperty(marker)
+  }, [properties.data, properties.loading, byId, markers, flyToProperty, initialUrl.position])
 
   // ---- AI assistant
   const askAssistant = useCallback((question: string) => {
@@ -211,7 +277,11 @@ export default function HomeValueExplorer() {
       onClick={() => setAssistantOpen((o) => !o)}
       aria-label="Ask HomeScope AI"
       aria-pressed={assistantOpen}
-      className={cn('size-10 shrink-0 bg-card shadow-md', assistantOpen && 'border-brand-teal bg-brand-teal-soft text-brand-teal-strong')}
+      className={cn(
+        'size-10 shrink-0',
+        FLOATING_BUTTON,
+        assistantOpen && 'border-brand-teal bg-brand-teal-soft text-brand-teal-strong dark:border-brand-teal dark:bg-brand-teal-soft dark:text-brand-teal-strong',
+      )}
     >
       <Sparkles />
     </Button>
@@ -250,7 +320,7 @@ export default function HomeValueExplorer() {
         selectedId={selectedId}
         loading={properties.loading}
         sort={sort}
-        onSortChange={setSort}
+        onSortChange={changeSort}
         onSelect={selectMarker}
       />
     </>
@@ -290,6 +360,8 @@ export default function HomeValueExplorer() {
           onSelect={selectFromMap}
           onViewChange={setView}
           onMapReady={setMap}
+          initialPosition={initialUrl.position}
+          showMarkers={!homesHidden}
         />
 
         {/* Overlays sit above Leaflet panes but let clicks through except on controls. */}
@@ -304,7 +376,7 @@ export default function HomeValueExplorer() {
                   size="icon-lg"
                   onClick={() => (isDesktop ? setSidebarOpen(true) : setMobileFiltersOpen(true))}
                   aria-label="Open filters and results"
-                  className="relative size-10 bg-card shadow-md"
+                  className={cn('relative size-10', FLOATING_BUTTON)}
                 >
                   <SlidersHorizontal />
                   {filterCount > 0 && (
@@ -364,6 +436,8 @@ export default function HomeValueExplorer() {
           <MapControls
             map={map}
             onReset={resetView}
+            homesHidden={homesHidden}
+            onToggleHomes={() => setHomesHidden((h) => !h)}
             className={cn('absolute right-3 transition-[right] duration-200', isDesktop ? 'bottom-8' : 'top-1/3', detailsOverlayVisible && 'right-[416px]')}
           />
 

@@ -6,8 +6,10 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { formatBaths, formatCurrency, formatNumber, homeTypeLabel, NA } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { PriceBasis, PropertyMarker } from '@/types/api'
+import type { SortKey } from '@/types/filters'
 
-export type SortKey = 'price_desc' | 'price_asc' | 'sqft_desc' | 'price_per_sqft_asc'
+export type { SortKey }
+
 const SORT_LABELS: Record<SortKey, string> = {
   price_desc: 'Price: high to low',
   price_asc: 'Price: low to high',
