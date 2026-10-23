@@ -1,0 +1,35 @@
+{
+  "name": "LightGBM log-price (example)",
+  "version": "1.0.0",
+  "framework": "sklearn",
+  "artifact": "model.joblib",
+  "preprocessor": null,
+  "feature_hook": null,
+  "target": "list_price",
+  "target_transform": "log1p",
+  "features": [
+    { "name": "bedrooms", "dtype": "float" },
+    { "name": "bathrooms", "dtype": "float" },
+    { "name": "living_area_sqft", "dtype": "float", "required": true },
+    { "name": "lot_area_sqft", "dtype": "float" },
+    { "name": "year_built", "dtype": "float" },
+    { "name": "home_type", "dtype": "category", "default": "SINGLE_FAMILY" },
+    { "name": "latitude", "dtype": "float", "required": true },
+    { "name": "longitude", "dtype": "float", "required": true },
+    { "name": "zipcode", "dtype": "category" },
+    { "name": "dist_downtown_mi", "source": "engineered:dist_downtown_mi" },
+    { "name": "dist_tmc_mi", "source": "engineered:dist_tmc_mi" }
+  ],
+  "interval": {
+    "method": "log_residual_quantiles",
+    "lower": -0.21,
+    "upper": 0.19,
+    "coverage": 0.8,
+    "description": "EXAMPLE VALUES — replace with quantiles of your validation residuals"
+  },
+  "metrics": null,
+  "training_data": { "source": "Kaggle Houston Housing 2024 clean", "period": "2024 listings", "rows": null },
+  "trained_at": null,
+  "leakage_exceptions": [],
+  "notes": "Example only. Copy to models/current/model_card.json and fill in real values; leave metrics null until you have validated numbers."
+}

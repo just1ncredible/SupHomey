@@ -1,0 +1,5 @@
+# Optional: install only the libraries your team's trained model actually needs.
+# Pin these to the SAME versions used during training to avoid unpickling errors.
+# xgboost
+# lightgbm
+# catboost

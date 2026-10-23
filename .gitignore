@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# Node / Vite
+node_modules/
+dist/
+*.local
+
+# Environment files (copy from .env.example)
+.env
+.env.*
+!.env.example
+
+# Data: Kaggle downloads are fetched with backend/scripts/fetch_dataset.py, not committed
+data/raw/*
+!data/raw/.gitkeep
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Large model artifacts: commit small bundles; use Git LFS for anything over ~50 MB
