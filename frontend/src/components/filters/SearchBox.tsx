@@ -164,7 +164,7 @@ export function SearchBox({ onSelectProperty, onSelectZip, onSelectCity, onAsk, 
                 <>
                   <Sparkles className="size-4 shrink-0 text-brand-teal-strong" />
                   <div className="min-w-0 flex-1">
-                    <div className="font-medium text-brand-teal-strong">Ask HomeScope AI</div>
+                    <div className="font-medium text-brand-teal-strong">Ask SupHomey AI</div>
                     <div className="truncate text-xs text-muted-foreground">“{o.item}”</div>
                   </div>
                 </>

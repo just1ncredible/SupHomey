@@ -1,19 +1,19 @@
-# HomeScope
+# SupHomey
 
 *Explore Houston. Understand Home Values.*
 
 A map-first web app for exploring Greater Houston residential properties and comparing them with
-machine-learning valuations. This repo contains **Module 1: Home Value Explorer**. Deal Radar and
-Affordability Explorer appear in the navigation as "Soon" and plug into the same shell later.
+machine-learning valuations. This repo contains **Module 1: Home Value Explorer**. Planned modules
+(Deal Radar, Affordability Explorer) are registered but hidden from the navigation until they ship.
 
 - Interactive Leaflet map of ~26,000 real 2024 Houston listings, with clustering and price labels
 - Address / ZIP / city search, filters (price, beds, baths, type, living area), results list
 - Property details with the AI valuation front and centre, listing price, facts and benchmarks
 - Market statistics scoped to the map view, the filtered set, or the whole dataset
 - A model hand-off layer: precomputed predictions or a real-time model bundle from the ML team
-- **Ask HomeScope**: AI search that answers plain-English questions from the dataset (OpenAI)
+- **Ask SupHomey**: AI search that answers plain-English questions from the dataset (OpenAI)
 - Eye button in the map controls hides the home markers to show the plain map (the selected home stays)
-- Settings menu (gear, top right): light (default) / dark / match-device theme, copy a link to the current
+- Settings menu (gear, top right): light (default) / dark / match-device theme, model status, copy a link to the current
   view, reset to defaults. Filters, sort, map position and the selected home live in the page
   address, so links are shareable; theme, sort, sidebar and price basis are remembered per browser
 
@@ -48,7 +48,7 @@ npm run dev
 
 Open **http://localhost:5173**. API docs are at **http://localhost:8000/docs**.
 
-**VS Code:** after the installs above, run *Terminal → Run Task… → Start HomeScope*
+**VS Code:** after the installs above, run *Terminal → Run Task… → Start SupHomey*
 to start both servers.
 
 If you skip `fetch_dataset.py`, the app still runs on a **synthetic fixture** and shows a
@@ -136,7 +136,7 @@ uvicorn app.main:app --reload --port 8000
 | `HOMESCOPE_MODEL_DIR` | `models/current` | Real-time model bundle folder |
 | `HOMESCOPE_PREDICTIONS_PATH` | `models/predictions/predictions.csv` | Batch predictions file |
 | `HOMESCOPE_SIMULATED_PREDICTIONS` | `false` | **Dev only**: fake valuations labelled "Simulated — UI Preview" |
-| `OPENAI_API_KEY` | *(empty)* | Enables Ask HomeScope (AI search). Server-side only |
+| `OPENAI_API_KEY` | *(empty)* | Enables Ask SupHomey (AI search). Server-side only |
 | `HOMESCOPE_OPENAI_MODEL` | `gpt-6-luna` | Any OpenAI Responses API model with function calling |
 | `HOMESCOPE_OPENAI_REASONING_EFFORT` | `low` | Reasoning effort sent to the model (blank to omit) |
 | `HOMESCOPE_CORS_ORIGINS` | `http://localhost:5173,...` | Origins allowed to call the API directly |
@@ -190,7 +190,7 @@ This uses KaggleHub to download:
 Public datasets normally download anonymously. If Kaggle asks for credentials, create a token at
 kaggle.com → Settings → API and save it as `~/.kaggle/kaggle.json`. To supply files manually, put
 the clean CSV at `data/raw/houston_housing_2024_clean.csv` (the details file is optional). Then
-restart the API, or use **Reload** in the model status panel.
+restart the API, or use **Reload** in the model status panel (Settings → Model status).
 
 ### What ingestion does (`backend/app/data/ingest.py`)
 
@@ -255,10 +255,10 @@ flag only) → unavailable.**
 
 ---
 
-## 7. Ask HomeScope (AI search)
+## 7. Ask SupHomey (AI search)
 
 Users can ask questions in plain English, either with the ✦ button next to the search bar or by
-typing a question into the search box and choosing *Ask HomeScope AI*. Examples:
+typing a question into the search box and choosing *Ask SupHomey AI*. Examples:
 
 | Question | What happens |
 |---|---|
@@ -297,7 +297,7 @@ The key stays on the server. Each question uses roughly 2–4 model calls.
 | `GET /api/model/metrics` | Model status, model card info, validation metrics, batch coverage |
 | `POST /api/model/reload` | Re-read dataset, model bundle and predictions from disk |
 | `GET /api/assistant/status` | Whether AI search is configured |
-| `POST /api/assistant/chat` | Ask HomeScope: `{"messages": [...], "context": {"selected_property_id", "map_bbox", "filters"}}` |
+| `POST /api/assistant/chat` | Ask SupHomey: `{"messages": [...], "context": {"selected_property_id", "map_bbox", "filters"}}` |
 | `POST /api/predict` | Real-time prediction: `{"property_id": "...", "attributes": {...overrides}}` |
 
 Interactive docs and schemas: http://localhost:8000/docs.
@@ -331,8 +331,8 @@ valuation services, since Deal Radar compares listing prices with batch predicti
 | Model chip says "Model error" | Open the chip: it shows the exact load error (invalid card, missing library, leakage). Install the training library at the training version (`requirements-ml.txt`). |
 | `ModuleNotFoundError: app` | Run uvicorn and scripts from inside `backend/`. |
 | Windows: `Activate.ps1 cannot be loaded` | Run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, or use `cmd` and `.venv\Scripts\activate.bat`. |
-| Ask HomeScope says "isn't configured" | Add `OPENAI_API_KEY` to `backend/.env` and restart uvicorn (`--reload` doesn't re-read `.env`). |
-| Ask HomeScope: "model wasn't found" | Set `HOMESCOPE_OPENAI_MODEL` to a model your OpenAI account can use. |
+| Ask SupHomey says "isn't configured" | Add `OPENAI_API_KEY` to `backend/.env` and restart uvicorn (`--reload` doesn't re-read `.env`). |
+| Ask SupHomey: "model wasn't found" | Set `HOMESCOPE_OPENAI_MODEL` to a model your OpenAI account can use. |
 | Python too old | Use Python 3.11+ (`py -3.12` on Windows, `brew install python@3.12` on macOS). |
 
 ---

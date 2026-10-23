@@ -23,7 +23,7 @@
       "presentation": { "group": "dev", "panel": "dedicated" }
     },
     {
-      "label": "Start HomeScope",
+      "label": "Start SupHomey",
       "dependsOn": ["Backend: FastAPI (port 8000)", "Frontend: Vite (port 5173)"],
       "dependsOrder": "parallel",
       "problemMatcher": []

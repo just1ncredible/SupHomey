@@ -57,7 +57,7 @@
 }
 
 :root {
-    /* HomeScope — navy + muted teal on soft off-white */
+    /* SupHomey — navy + muted teal on soft off-white */
     --background: oklch(0.984 0.003 247);
     --foreground: oklch(0.235 0.035 257);
     --card: oklch(1 0 0);
@@ -100,7 +100,7 @@
 }
 
 .dark {
-    /* HomeScope dark — deep navy surfaces, lifted teal accents */
+    /* SupHomey dark — deep navy surfaces, lifted teal accents */
     --background: oklch(0.175 0.02 257);
     --foreground: oklch(0.95 0.006 247);
     --card: oklch(0.215 0.024 257);
