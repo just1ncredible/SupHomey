@@ -10,6 +10,7 @@ import type {
   PropertyListResponse,
   SearchResponse,
 } from '@/types/api'
+import type { ApiFilters, AssistantContext, AssistantResponse, AssistantStatus, ChatMessage } from '@/types/assistant'
 import type { PropertyFilters } from '@/types/filters'
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
@@ -73,6 +74,36 @@ export function filtersToParams(f: PropertyFilters): Params {
   }
 }
 
+export function toApiFilters(f: PropertyFilters): ApiFilters {
+  return {
+    price_basis: f.priceBasis,
+    min_price: f.minPrice,
+    max_price: f.maxPrice,
+    min_beds: f.minBeds,
+    min_baths: f.minBaths,
+    home_types: f.homeTypes,
+    min_sqft: f.minSqft,
+    max_sqft: f.maxSqft,
+    zipcode: f.zipcode,
+    city: f.city,
+  }
+}
+
+export function fromApiFilters(f: ApiFilters): PropertyFilters {
+  return {
+    priceBasis: f.price_basis,
+    minPrice: f.min_price,
+    maxPrice: f.max_price,
+    minBeds: f.min_beds,
+    minBaths: f.min_baths,
+    homeTypes: f.home_types,
+    minSqft: f.min_sqft,
+    maxSqft: f.max_sqft,
+    zipcode: f.zipcode,
+    city: f.city,
+  }
+}
+
 const bboxParam = (bbox: BBox | null | undefined) => (bbox ? bbox.map((v) => v.toFixed(5)).join(',') : null)
 
 export const api = {
@@ -98,6 +129,12 @@ export const api = {
     }),
 
   modelStatus: (signal?: AbortSignal) => request<ModelStatus>('/api/model/metrics', { signal }),
+
+  assistantStatus: (signal?: AbortSignal) => request<AssistantStatus>('/api/assistant/status', { signal }),
+
+  /** Ask HomeScope: natural-language question answered from the dataset via OpenAI tool calling. */
+  assistantChat: (messages: ChatMessage[], context: AssistantContext, signal?: AbortSignal) =>
+    request<AssistantResponse>('/api/assistant/chat', { method: 'POST', body: JSON.stringify({ messages, context }), signal }),
 
   /** Re-read the dataset, model bundle and batch predictions from disk. */
   reloadModel: () => request<ModelStatus>('/api/model/reload', { method: 'POST' }),

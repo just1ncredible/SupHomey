@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import L from 'leaflet'
-import { AlertTriangle, FlaskConical, Loader2, PanelLeftClose, PanelLeftOpen, SearchX, SlidersHorizontal } from 'lucide-react'
+import { AlertTriangle, FlaskConical, Loader2, PanelLeftClose, SearchX, SlidersHorizontal, Sparkles } from 'lucide-react'
+
+import { AssistantPanel, type Turn } from '@/components/assistant/AssistantPanel'
 
 import { MarketStatsPanel } from '@/components/charts/MarketStatsPanel'
 import { FiltersPanel } from '@/components/filters/FiltersPanel'
-import { ResultsList } from '@/components/filters/ResultsList'
+import { ResultsList, type SortKey } from '@/components/filters/ResultsList'
 import { SearchBox } from '@/components/filters/SearchBox'
 import { MapControls } from '@/components/map/MapControls'
 import { HOUSTON_VIEW, PROPERTY_FOCUS_ZOOM } from '@/components/map/mapConfig'
@@ -15,10 +17,10 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { useAppStatus } from '@/context/AppStatus'
 import { useApi } from '@/hooks/useApi'
 import { useIsDesktop } from '@/hooks/useMediaQuery'
-import { formatNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { api, filtersToParams } from '@/services/api'
+import { api, filtersToParams, fromApiFilters, toApiFilters } from '@/services/api'
 import type { BBox, PropertyMarker } from '@/types/api'
+import type { AreaRow, AssistantAction } from '@/types/assistant'
 import { activeFilterCount, DEFAULT_FILTERS, type PropertyFilters } from '@/types/filters'
 
 const DETAILS_PANEL_WIDTH = 400
@@ -39,8 +41,13 @@ export default function HomeValueExplorer() {
   const [selection, setSelection] = useState<Selection | null>(null)
   const [view, setView] = useState<MapView | null>(null)
   const [map, setMap] = useState<L.Map | null>(null)
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  // Filters start collapsed on desktop; the floating search bar stays visible.
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
+  const [sort, setSort] = useState<SortKey>('price_desc')
+  const [assistantOpen, setAssistantOpen] = useState(false)
+  const [assistantTurns, setAssistantTurns] = useState<Turn[]>([])
+  const [pendingQuestion, setPendingQuestion] = useState<{ id: number; text: string } | null>(null)
 
   // ---- Data
   const meta = useApi(`meta:${dataVersion}`, (s) => api.filterMeta(s))
@@ -139,6 +146,77 @@ export default function HomeValueExplorer() {
 
   const updateFilters = useCallback((next: PropertyFilters) => setFilters(next), [])
 
+  // ---- AI assistant
+  const askAssistant = useCallback((question: string) => {
+    setAssistantOpen(true)
+    setMobileFiltersOpen(false)
+    setPendingQuestion({ id: Date.now(), text: question })
+  }, [])
+
+  /** Select a home the assistant mentioned; if current filters hide it, clear them so it shows. */
+  const selectAssistantProperty = useCallback(
+    (p: PropertyMarker) => {
+      if (!byId.has(p.id)) setFilters((f) => ({ ...DEFAULT_FILTERS, priceBasis: f.priceBasis }))
+      if (!isDesktop) setAssistantOpen(false) // reveal the details sheet on phones
+      selectMarker(p)
+    },
+    [byId, isDesktop, selectMarker],
+  )
+
+  const applyAssistantActions = useCallback(
+    (actions: AssistantAction[]) => {
+      for (const action of actions) {
+        if (action.type === 'set_filters') {
+          setFilters(fromApiFilters(action.filters))
+          if (action.sort) setSort(action.sort)
+          if (action.bounds && !actions.some((a) => a.type === 'select_property')) fitBBox(action.bounds)
+        } else if (!actions.some((a) => a.type === 'set_filters')) {
+          selectAssistantProperty(action.property)
+        } else {
+          if (!isDesktop) setAssistantOpen(false)
+          selectMarker(action.property)
+        }
+      }
+    },
+    [fitBBox, selectMarker, selectAssistantProperty, isDesktop],
+  )
+
+  const selectArea = useCallback(
+    (row: AreaRow) => {
+      setFilters((f) => ({ ...f, zipcode: row.kind === 'zipcode' ? row.area : null, city: row.kind === 'city' ? row.area : null }))
+      if (!isDesktop) setAssistantOpen(false)
+      fitBBox(row.bounds)
+    },
+    [fitBBox, isDesktop],
+  )
+
+  const assistant = (
+    <AssistantPanel
+      turns={assistantTurns}
+      setTurns={setAssistantTurns}
+      context={{ selected_property_id: selectedId, map_bbox: view?.bbox ?? null, filters: toApiFilters(filters) }}
+      pendingQuestion={pendingQuestion}
+      onActions={applyAssistantActions}
+      onSelectProperty={selectAssistantProperty}
+      onSelectArea={selectArea}
+      onClose={() => setAssistantOpen(false)}
+      className={isDesktop ? undefined : 'h-full rounded-none border-0 shadow-none'}
+    />
+  )
+
+  const askButton = (
+    <Button
+      variant="outline"
+      size="icon-lg"
+      onClick={() => setAssistantOpen((o) => !o)}
+      aria-label="Ask HomeScope AI"
+      aria-pressed={assistantOpen}
+      className={cn('size-10 shrink-0 bg-card shadow-md', assistantOpen && 'border-brand-teal bg-brand-teal-soft text-brand-teal-strong')}
+    >
+      <Sparkles />
+    </Button>
+  )
+
   // ---- Shared pieces
   const search = (
     <SearchBox
@@ -156,6 +234,7 @@ export default function HomeValueExplorer() {
         fitBBox(c.bounds)
         setMobileFiltersOpen(false)
       }}
+      onAsk={askAssistant}
     />
   )
 
@@ -170,6 +249,8 @@ export default function HomeValueExplorer() {
         priceBasis={filters.priceBasis}
         selectedId={selectedId}
         loading={properties.loading}
+        sort={sort}
+        onSortChange={setSort}
         onSelect={selectMarker}
       />
     </>
@@ -191,6 +272,7 @@ export default function HomeValueExplorer() {
         <aside aria-label="Search and filters" className="flex w-[372px] shrink-0 flex-col border-r bg-card">
           <div className="flex items-center gap-2 p-3">
             {search}
+            {askButton}
             <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)} aria-label="Collapse sidebar" className="shrink-0">
               <PanelLeftClose />
             </Button>
@@ -212,17 +294,18 @@ export default function HomeValueExplorer() {
 
         {/* Overlays sit above Leaflet panes but let clicks through except on controls. */}
         <div className="pointer-events-none absolute inset-0 z-[1000]">
-          <div className="absolute top-3 right-3 left-3 flex items-start gap-2">
-            {isDesktop ? (
-              !sidebarOpen && (
-                <Button variant="outline" onClick={() => setSidebarOpen(true)} className="pointer-events-auto h-10 bg-card shadow-md">
-                  <PanelLeftOpen /> Search &amp; filters{filterCount ? ` (${filterCount})` : ''}
-                </Button>
-              )
-            ) : (
-              <div className="pointer-events-auto flex flex-1 gap-2">
+          <div className="absolute top-3 right-3 left-3 z-10 flex items-center gap-2">
+            {(!isDesktop || !sidebarOpen) && (
+              <div className={cn('pointer-events-auto flex gap-2', isDesktop ? 'w-[468px] shrink-0' : 'flex-1')}>
                 <div className="flex-1 drop-shadow-md">{search}</div>
-                <Button variant="outline" size="icon-lg" onClick={() => setMobileFiltersOpen(true)} aria-label="Open filters and results" className="relative size-10 bg-card shadow-md">
+                {askButton}
+                <Button
+                  variant="outline"
+                  size="icon-lg"
+                  onClick={() => (isDesktop ? setSidebarOpen(true) : setMobileFiltersOpen(true))}
+                  aria-label="Open filters and results"
+                  className="relative size-10 bg-card shadow-md"
+                >
                   <SlidersHorizontal />
                   {filterCount > 0 && (
                     <span className="absolute -top-1 -right-1 grid size-4 place-items-center rounded-full bg-brand-teal text-[10px] font-semibold text-white">
@@ -230,23 +313,6 @@ export default function HomeValueExplorer() {
                     </span>
                   )}
                 </Button>
-              </div>
-            )}
-
-            {isDesktop && (
-              <div className="pointer-events-auto flex items-center gap-2 rounded-full border bg-card/95 px-3 py-1.5 text-xs shadow-sm backdrop-blur">
-                <span
-                  className={cn(
-                    'size-2 rounded-full',
-                    filters.priceBasis === 'list' ? 'bg-brand-navy' : meta.data?.predicted_kind === 'simulated' ? 'bg-warning' : 'bg-brand-teal',
-                  )}
-                />
-                <span className="font-medium">{basisLabel}</span>
-                <span className="text-muted-foreground">·</span>
-                <span className="text-muted-foreground tabular">
-                  {properties.loading && !properties.data ? 'Loading…' : `${formatNumber(properties.data?.total ?? 0)} properties`}
-                </span>
-                {properties.loading && properties.data && <Loader2 className="size-3 animate-spin text-muted-foreground" />}
               </div>
             )}
           </div>
@@ -308,6 +374,12 @@ export default function HomeValueExplorer() {
             className={cn('absolute bottom-6 left-3 max-h-[calc(100%-6rem)] overflow-y-auto', isDesktop ? 'w-[420px]' : 'right-3')}
           />
 
+          {isDesktop && assistantOpen && (
+            <div className="pointer-events-auto absolute top-16 bottom-[104px] left-3 flex w-[468px] animate-in duration-200 fade-in slide-in-from-top-2">
+              {assistant}
+            </div>
+          )}
+
           {detailsOverlayVisible && (
             <aside
               aria-label="Property details"
@@ -326,9 +398,16 @@ export default function HomeValueExplorer() {
         </div>
       </div>
 
-      {/* ---------- Mobile: filters drawer + details bottom sheet ---------- */}
+      {/* ---------- Mobile: filters drawer, assistant and details bottom sheets ---------- */}
       {!isDesktop && (
         <>
+          <Sheet open={assistantOpen} onOpenChange={setAssistantOpen}>
+            <SheetContent side="bottom" showCloseButton={false} className="gap-0 overflow-hidden rounded-t-2xl p-0 data-[side=bottom]:h-[85dvh]">
+              <SheetTitle className="sr-only">Ask HomeScope</SheetTitle>
+              <SheetDescription className="sr-only">Ask questions about Houston homes</SheetDescription>
+              {assistant}
+            </SheetContent>
+          </Sheet>
           <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
             <SheetContent side="left" className="w-[92vw] max-w-sm gap-0 overflow-y-auto p-0">
               <SheetHeader className="border-b">

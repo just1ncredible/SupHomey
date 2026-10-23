@@ -7,11 +7,12 @@ import { formatBaths, formatCurrency, formatNumber, homeTypeLabel, NA } from '@/
 import { cn } from '@/lib/utils'
 import type { PriceBasis, PropertyMarker } from '@/types/api'
 
-type SortKey = 'price_desc' | 'price_asc' | 'sqft_desc'
+export type SortKey = 'price_desc' | 'price_asc' | 'sqft_desc' | 'price_per_sqft_asc'
 const SORT_LABELS: Record<SortKey, string> = {
   price_desc: 'Price: high to low',
   price_asc: 'Price: low to high',
   sqft_desc: 'Largest first',
+  price_per_sqft_asc: 'Lowest $/sqft',
 }
 const PAGE = 40
 
@@ -21,17 +22,21 @@ interface ResultsListProps {
   priceBasis: PriceBasis
   selectedId: string | null
   loading: boolean
+  sort: SortKey
+  onSortChange: (sort: SortKey) => void
   onSelect: (p: PropertyMarker) => void
 }
 
-export function ResultsList({ items, totalMatching, priceBasis, selectedId, loading, onSelect }: ResultsListProps) {
-  const [sort, setSort] = useState<SortKey>('price_desc')
+export function ResultsList({ items, totalMatching, priceBasis, selectedId, loading, sort, onSortChange, onSelect }: ResultsListProps) {
   const [shown, setShown] = useState(PAGE)
 
   const sorted = useMemo(() => {
     const price = (p: PropertyMarker) => displayPrice(p, priceBasis).value
     const copy = [...items]
+    const ppsf = (p: PropertyMarker) =>
+      p.list_price != null && p.living_area_sqft && p.home_type !== 'LOT' ? p.list_price / p.living_area_sqft : Infinity
     if (sort === 'sqft_desc') copy.sort((a, b) => (b.living_area_sqft ?? -1) - (a.living_area_sqft ?? -1))
+    else if (sort === 'price_per_sqft_asc') copy.sort((a, b) => ppsf(a) - ppsf(b))
     else copy.sort((a, b) => ((price(a) ?? -1) - (price(b) ?? -1)) * (sort === 'price_asc' ? 1 : -1))
     if (sort === 'price_asc') copy.sort((a, b) => Number(price(a) == null) - Number(price(b) == null))
     return copy
@@ -51,7 +56,7 @@ export function ResultsList({ items, totalMatching, priceBasis, selectedId, load
           <select
             value={sort}
             onChange={(e) => {
-              setSort(e.target.value as SortKey)
+              onSortChange(e.target.value as SortKey)
               setShown(PAGE)
             }}
             className="cursor-pointer rounded-md bg-transparent py-0.5 text-xs font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/60"

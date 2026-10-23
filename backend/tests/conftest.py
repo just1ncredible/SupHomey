@@ -28,8 +28,9 @@ def make_settings(tmp_path: Path, **overrides) -> Settings:
 def client_factory(tmp_path):
     clients = []
 
-    def factory(**overrides) -> TestClient:
-        client = TestClient(create_app(make_settings(tmp_path, **overrides)))
+    def factory(openai_client=None, **overrides) -> TestClient:
+        overrides.setdefault("OPENAI_API_KEY", None)  # never pick up a real key from the shell
+        client = TestClient(create_app(make_settings(tmp_path, **overrides), openai_client=openai_client))
         client.__enter__()
         clients.append(client)
         return client

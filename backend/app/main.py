@@ -5,6 +5,7 @@
 
 import logging
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,18 +13,20 @@ from fastapi.middleware.gzip import GZipMiddleware
 
 from app import __version__
 from app.config import Settings, get_settings
-from app.routes import health, market, model, properties
+from app.assistant.agent import Assistant
+from app.routes import assistant, health, market, model, properties
 from app.services.container import build_services
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s  %(name)s: %(message)s")
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(settings: Settings | None = None, openai_client: Any | None = None) -> FastAPI:
     settings = settings or get_settings()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         app.state.services = build_services(settings)
+        app.state.assistant = Assistant(settings, client=openai_client)
         yield
 
     app = FastAPI(
@@ -42,7 +45,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_methods=["GET", "POST"],
         allow_headers=["*"],
     )
-    for module in (health, properties, market, model):
+    for module in (health, properties, market, model, assistant):
         app.include_router(module.router)
     return app
 

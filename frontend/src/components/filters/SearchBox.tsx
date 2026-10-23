@@ -1,5 +1,5 @@
 import { useId, useMemo, useRef, useState } from 'react'
-import { Building2, Loader2, MapPin, Search, X } from 'lucide-react'
+import { Building2, Loader2, MapPin, Search, Sparkles, X } from 'lucide-react'
 
 import { useApi } from '@/hooks/useApi'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
@@ -9,6 +9,7 @@ import { api } from '@/services/api'
 import type { CityMatch, PropertyMarker, ZipMatch } from '@/types/api'
 
 type Option =
+  | { kind: 'ask'; key: string; item: string }
   | { kind: 'property'; key: string; item: PropertyMarker }
   | { kind: 'zip'; key: string; item: ZipMatch }
   | { kind: 'city'; key: string; item: CityMatch }
@@ -17,10 +18,21 @@ interface SearchBoxProps {
   onSelectProperty: (p: PropertyMarker) => void
   onSelectZip: (z: ZipMatch) => void
   onSelectCity: (c: CityMatch) => void
+  /** Send free-text questions to the AI assistant. */
+  onAsk?: (question: string) => void
   className?: string
 }
 
-export function SearchBox({ onSelectProperty, onSelectZip, onSelectCity, className }: SearchBoxProps) {
+const QUESTION_START = /^(what|where|which|who|why|how|show|find|list|is|are|can|should|if|compare|cheapest|average)\b/i
+
+/** Heuristic: does this look like a natural-language question rather than an address or ZIP? */
+function looksLikeQuestion(text: string): boolean {
+  const t = text.trim()
+  if (/^\d+\s+\S+/.test(t) && !t.endsWith('?')) return false // "13234 Vallentine…" is an address
+  return t.endsWith('?') || QUESTION_START.test(t) || t.split(/\s+/).length >= 4
+}
+
+export function SearchBox({ onSelectProperty, onSelectZip, onSelectCity, onAsk, className }: SearchBoxProps) {
   const [text, setText] = useState('')
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
@@ -30,16 +42,22 @@ export function SearchBox({ onSelectProperty, onSelectZip, onSelectCity, classNa
   const { data, loading, error } = useApi(query.length >= 1 ? `search:${query}` : null, (s) => api.search(query, s))
 
   const options = useMemo<Option[]>(() => {
-    if (!data || !query) return []
-    return [
+    const ask: Option[] = onAsk && looksLikeQuestion(text) ? [{ kind: 'ask', key: 'ask', item: text.trim() }] : []
+    if (!data || !query) return ask
+    const matches: Option[] = [
       ...data.zipcodes.map((z) => ({ kind: 'zip' as const, key: `z${z.zipcode}`, item: z })),
       ...data.cities.map((c) => ({ kind: 'city' as const, key: `c${c.city}`, item: c })),
       ...data.properties.map((p) => ({ kind: 'property' as const, key: `p${p.id}`, item: p })),
     ]
-  }, [data, query])
+    // Dataset matches win the Enter key; the AI option leads only when nothing matches.
+    return matches.length ? [...matches, ...ask] : ask
+  }, [data, query, text, onAsk])
 
   function choose(option: Option) {
-    if (option.kind === 'property') {
+    if (option.kind === 'ask') {
+      onAsk?.(option.item)
+      setText('')
+    } else if (option.kind === 'property') {
       onSelectProperty(option.item)
       setText(option.item.street_address ?? '')
     } else if (option.kind === 'zip') {
@@ -69,7 +87,7 @@ export function SearchBox({ onSelectProperty, onSelectZip, onSelectCity, classNa
     }
   }
 
-  const showList = open && query.length >= 1 && text.trim().length >= 1
+  const showList = open && text.trim().length >= 1 && (query.length >= 1 || options.length > 0)
   const activeOption = options[active]
 
   return (
@@ -84,8 +102,8 @@ export function SearchBox({ onSelectProperty, onSelectZip, onSelectCity, classNa
           aria-controls={listId}
           aria-autocomplete="list"
           aria-activedescendant={showList && activeOption ? `${listId}-${activeOption.key}` : undefined}
-          aria-label="Search by street address, ZIP code, or city"
-          placeholder="Address, ZIP code, or city"
+          aria-label="Search by street address, ZIP code, or city, or ask a question"
+          placeholder={onAsk ? 'Address, ZIP, city — or ask a question' : 'Address, ZIP code, or city'}
           value={text}
           onChange={(e) => {
             setText(e.target.value)
@@ -142,7 +160,15 @@ export function SearchBox({ onSelectProperty, onSelectZip, onSelectCity, classNa
                 i === active && 'bg-muted',
               )}
             >
-              {o.kind === 'property' ? (
+              {o.kind === 'ask' ? (
+                <>
+                  <Sparkles className="size-4 shrink-0 text-brand-teal-strong" />
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-brand-teal-strong">Ask HomeScope AI</div>
+                    <div className="truncate text-xs text-muted-foreground">“{o.item}”</div>
+                  </div>
+                </>
+              ) : o.kind === 'property' ? (
                 <>
                   <MapPin className="size-4 shrink-0 text-brand-teal-strong" />
                   <div className="min-w-0 flex-1">

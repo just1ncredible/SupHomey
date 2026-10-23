@@ -9,6 +9,9 @@ numpy>=1.26
 scikit-learn>=1.4
 joblib>=1.3
 
+# AI search assistant
+openai>=3.30
+
 # Dataset download helper (scripts/fetch_dataset.py)
 kagglehub>=0.3
 

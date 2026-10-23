@@ -3,6 +3,7 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import AliasChoices, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
@@ -31,6 +32,14 @@ class Settings(BaseSettings):
 
     # Hard cap on markers returned by a single /api/properties request.
     max_page_size: int = 30000
+
+    # AI search (OpenAI). The key is read from OPENAI_API_KEY and never sent to the browser.
+    openai_api_key: SecretStr | None = Field(
+        default=None, validation_alias=AliasChoices("OPENAI_API_KEY", "HOMESCOPE_OPENAI_API_KEY")
+    )
+    openai_model: str = "gpt-6-luna"
+    openai_reasoning_effort: str = "low"
+    assistant_max_tool_rounds: int = 6
 
     def resolve(self, path: Path) -> Path:
         return path if path.is_absolute() else REPO_ROOT / path

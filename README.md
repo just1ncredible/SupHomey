@@ -11,6 +11,7 @@ Affordability Explorer appear in the navigation as "Soon" and plug into the same
 - Property details with the AI valuation front and centre, listing price, facts and benchmarks
 - Market statistics scoped to the map view, the filtered set, or the whole dataset
 - A model hand-off layer: precomputed predictions or a real-time model bundle from the ML team
+- **Ask HomeScope**: AI search that answers plain-English questions from the dataset (OpenAI)
 
 > **What the numbers are.** Prices in the dataset are **2024 Zillow asking prices** from a listing
 > snapshot: not sale prices, and the homes are not necessarily for sale now. AI valuations appear
@@ -131,6 +132,9 @@ uvicorn app.main:app --reload --port 8000
 | `HOMESCOPE_MODEL_DIR` | `models/current` | Real-time model bundle folder |
 | `HOMESCOPE_PREDICTIONS_PATH` | `models/predictions/predictions.csv` | Batch predictions file |
 | `HOMESCOPE_SIMULATED_PREDICTIONS` | `false` | **Dev only**: fake valuations labelled "Simulated — UI Preview" |
+| `OPENAI_API_KEY` | *(empty)* | Enables Ask HomeScope (AI search). Server-side only |
+| `HOMESCOPE_OPENAI_MODEL` | `gpt-6-luna` | Any OpenAI Responses API model with function calling |
+| `HOMESCOPE_OPENAI_REASONING_EFFORT` | `low` | Reasoning effort sent to the model (blank to omit) |
 | `HOMESCOPE_CORS_ORIGINS` | `http://localhost:5173,...` | Origins allowed to call the API directly |
 
 Run the tests: `python -m pytest -q` (from `backend/`).
@@ -247,7 +251,36 @@ flag only) → unavailable.**
 
 ---
 
-## 7. API reference
+## 7. Ask HomeScope (AI search)
+
+Users can ask questions in plain English, either with the ✦ button next to the search bar or by
+typing a question into the search box and choosing *Ask HomeScope AI*. Examples:
+
+| Question | What happens |
+|---|---|
+| "Show me three-bedroom homes under $300k" | Filters applied to the map and list; top matches shown |
+| "What are the cheapest homes in 77008?" | ZIP filter + price sort; cheapest listings shown |
+| "Where are house prices generally lower?" | ZIP codes ranked by median listing price (clickable) |
+| "What is the average house price in Katy?" | Mean, median, quartiles, $/sqft for Katy |
+| "Why is this home estimated at $350k?" | Looks up the selected home's real valuation and any available explanation |
+| "If I was broke, where should I live?" | Asks for budget and rent-vs-buy before suggesting anything |
+
+**Setup:** put `OPENAI_API_KEY=sk-...` in `backend/.env` and restart the API. Without a key the
+panel explains how to enable it; the rest of the app is unaffected.
+
+**How it works:** `POST /api/assistant/chat` (in `backend/app/assistant/`) runs an OpenAI Responses
+API tool-calling loop. The model never sees the raw dataset. It calls four data tools
+(`search_properties`, `compare_areas`, `area_statistics`, `get_property`) that query the same
+repository as the map, and the system prompt requires every number to come from a tool result.
+Tool calls can return **actions** (apply filters/sort, select a home) that the frontend performs,
+and **cards** (property lists, area tables, stats) rendered next to the reply. The same rules as
+the rest of the app apply: listing prices are labelled as 2024 asking prices, Zestimates are
+labelled third-party, and AI valuations are only reported when a model supplied them.
+
+**Privacy and cost:** questions, plus the tool results needed to answer them, are sent to OpenAI.
+The key stays on the server. Each question uses roughly 2–4 model calls.
+
+## 8. API reference
 
 | Endpoint | Purpose |
 |---|---|
@@ -259,6 +292,8 @@ flag only) → unavailable.**
 | `GET /api/market/summary` | Descriptive statistics; the same filters + `bbox`; the response states its `scope` |
 | `GET /api/model/metrics` | Model status, model card info, validation metrics, batch coverage |
 | `POST /api/model/reload` | Re-read dataset, model bundle and predictions from disk |
+| `GET /api/assistant/status` | Whether AI search is configured |
+| `POST /api/assistant/chat` | Ask HomeScope: `{"messages": [...], "context": {"selected_property_id", "map_bbox", "filters"}}` |
 | `POST /api/predict` | Real-time prediction: `{"property_id": "...", "attributes": {...overrides}}` |
 
 Interactive docs and schemas: http://localhost:8000/docs.
@@ -269,7 +304,7 @@ PostgreSQL/PostGIS, implement that interface (bbox becomes `ST_MakeEnvelope`, fi
 
 ---
 
-## 8. Adding future modules
+## 9. Adding future modules
 
 Add an entry in `frontend/src/modules/registry.ts`: set `status: 'active'` and point `page` at a
 new component in `src/pages/`. Navigation and routing pick it up automatically. Backend routes go
@@ -278,7 +313,7 @@ valuation services, since Deal Radar compares listing prices with batch predicti
 
 ---
 
-## 9. Troubleshooting
+## 10. Troubleshooting
 
 | Symptom | Fix |
 |---|---|
@@ -292,6 +327,8 @@ valuation services, since Deal Radar compares listing prices with batch predicti
 | Model chip says "Model error" | Open the chip: it shows the exact load error (invalid card, missing library, leakage). Install the training library at the training version (`requirements-ml.txt`). |
 | `ModuleNotFoundError: app` | Run uvicorn and scripts from inside `backend/`. |
 | Windows: `Activate.ps1 cannot be loaded` | Run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, or use `cmd` and `.venv\Scripts\activate.bat`. |
+| Ask HomeScope says "isn't configured" | Add `OPENAI_API_KEY` to `backend/.env` and restart uvicorn (`--reload` doesn't re-read `.env`). |
+| Ask HomeScope: "model wasn't found" | Set `HOMESCOPE_OPENAI_MODEL` to a model your OpenAI account can use. |
 | Python too old | Use Python 3.11+ (`py -3.12` on Windows, `brew install python@3.12` on macOS). |
 
 ---
